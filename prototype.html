@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Going Green Dashboard - Connection Prototype</title>
+  <style>
+    body{margin:0;font-family:Inter,system-ui,sans-serif;background:#111416;color:#f1f3ee}
+    .app{max-width:1200px;margin:0 auto;padding:16px;display:grid;gap:12px}
+    .card{background:#1f272a;border:1px solid #2d383c;border-radius:12px;padding:12px}
+    .top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    button,input,select{background:#2e393d;color:#fff;border:1px solid #3f4c51;border-radius:8px;padding:8px}
+    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+    .value{font-size:2rem;font-weight:700}
+    .muted{color:#aab4b8}
+    pre{white-space:pre-wrap;max-height:280px;overflow:auto;background:#111;padding:8px;border-radius:8px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="card top">
+    <div>
+      <h1 style="margin:0">Going Green Connection Prototype</h1>
+      <div class="muted">Use this to validate endpoint payload + floor KPI rendering</div>
+    </div>
+    <div class="controls">
+      <select id="facility"><option>Combined</option><option>Durant</option><option>Poteau</option></select>
+      <input id="endpoint" placeholder="https://.../dashboard-snapshot" size="42"/>
+      <button id="load">Connect</button>
+    </div>
+  </div>
+
+  <div class="card" id="status">Status: mock data loaded</div>
+  <section id="kpis" class="kpis"></section>
+  <div class="card">
+    <h3>Payload Preview</h3>
+    <pre id="payload"></pre>
+  </div>
+</div>
+<script>
+const mock=(facility)=>({asOf:new Date().toISOString(),facility,status:'on-pace',kpis:[{label:'Pounds Today',value:'18,420'},{label:'Bales Today',value:'23'},{label:'Efficiency',value:'92.4%'},{label:'Projected End',value:'22,700'}],race:[],materialMix:[],activity:[]});
+const el={kpis:document.getElementById('kpis'),status:document.getElementById('status'),payload:document.getElementById('payload'),facility:document.getElementById('facility'),endpoint:document.getElementById('endpoint')};
+function render(data,source){
+ el.status.textContent=`Status: ${source} • ${data.facility} • ${new Date(data.asOf).toLocaleTimeString()}`;
+ el.kpis.innerHTML='';
+ data.kpis.forEach(k=>{const d=document.createElement('div');d.className='card';d.innerHTML=`<div class="muted">${k.label}</div><div class="value">${k.value}</div>`;el.kpis.appendChild(d)});
+ el.payload.textContent=JSON.stringify(data,null,2);
+}
+render(mock('Combined'),'mock');
+
+document.getElementById('load').onclick=async()=>{
+  const facility=el.facility.value; const url=el.endpoint.value.trim();
+  if(!url){render(mock(facility),'mock');return;}
+  try{
+    const res=await fetch(`${url}?facility=${encodeURIComponent(facility)}`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    render(await res.json(),'api');
+  }catch(err){
+    el.status.textContent=`Status: connection failed (${err.message})`;
+  }
+}
+</script>
+</body>
+</html>
